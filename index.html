@@ -1,0 +1,1660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GameZone Scores</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #060b10;
+  --surface: #0c1a25;
+  --surface2: #112030;
+  --border: #1c3a55;
+  --accent: #00d4ff;
+  --accent2: #ff6b00;
+  --accent3: #00ff88;
+  --gold: #ffd700;
+  --silver: #c0c0c0;
+  --bronze: #cd7f32;
+  --text: #dff0ff;
+  --muted: #4a7a99;
+  --danger: #ff3366;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'Rajdhani',sans-serif; min-height:100vh; overflow-x:hidden; }
+body::before {
+  content:''; position:fixed; inset:0;
+  background-image: linear-gradient(rgba(0,212,255,.025) 1px,transparent 1px), linear-gradient(90deg,rgba(0,212,255,.025) 1px,transparent 1px);
+  background-size:60px 60px; pointer-events:none; z-index:0;
+}
+.orb { position:fixed; border-radius:50%; filter:blur(90px); opacity:.12; pointer-events:none; z-index:0; }
+.orb1 { width:500px;height:500px;background:var(--accent);top:-150px;left:-150px;animation:floatOrb 10s ease-in-out infinite; }
+.orb2 { width:350px;height:350px;background:var(--accent2);bottom:-100px;right:-100px;animation:floatOrb 13s ease-in-out infinite reverse; }
+@keyframes floatOrb { 0%,100%{transform:translate(0,0)} 50%{transform:translate(40px,-40px)} }
+
+/* ===== LIVE CLOCK ===== */
+#liveClock {
+  position:fixed; top:16px; left:50%; transform:translateX(-50%);
+  z-index:100; display:flex; align-items:center; gap:8px;
+  background:rgba(6,11,16,.85); border:1px solid var(--border);
+  padding:5px 14px; border-radius:20px; backdrop-filter:blur(8px);
+}
+#clockTime {
+  font-family:'Orbitron',monospace; font-size:13px; color:var(--accent);
+  letter-spacing:2px; min-width:80px; text-align:center;
+}
+#clockDate { font-size:10px; color:var(--muted); letter-spacing:1px; }
+.clock-dot { width:6px;height:6px;border-radius:50%;background:var(--accent3);animation:blink 1s ease-in-out infinite; }
+
+header { text-align:center; padding:64px 20px 20px; position:relative; z-index:1; }
+.logo { font-family:'Orbitron',monospace; font-size:clamp(24px,5vw,48px); font-weight:900; letter-spacing:4px;
+  background:linear-gradient(135deg,var(--accent),var(--accent3),var(--accent2));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  filter:drop-shadow(0 0 15px rgba(0,212,255,.4)); }
+.tagline { color:var(--muted); font-size:12px; letter-spacing:5px; text-transform:uppercase; margin-top:6px; }
+
+/* Refresh bar */
+#refreshBar {
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  padding:8px 20px; background:rgba(0,212,255,.04);
+  border-bottom:1px solid rgba(0,212,255,.1); position:relative; z-index:2;
+}
+.refresh-dot { width:8px;height:8px;border-radius:50%;background:var(--accent3);animation:blink 1s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+.refresh-text { font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase; }
+.refresh-countdown { font-family:'Orbitron',monospace;font-size:12px;color:var(--accent);background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);padding:2px 8px;border-radius:3px;min-width:44px;text-align:center; }
+.refresh-spin { display:none;width:14px;height:14px;border:2px solid rgba(0,212,255,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+.refresh-spin.active { display:inline-block; }
+
+#loadingBanner { position:fixed;top:0;left:0;right:0;z-index:500;background:linear-gradient(90deg,var(--accent2),var(--gold));color:#000;text-align:center;font-family:'Orbitron',monospace;font-size:11px;letter-spacing:2px;padding:6px;animation:pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+
+.admin-lock-btn {
+  position:fixed;top:16px;right:16px;z-index:100;background:var(--surface2);border:1px solid var(--border);
+  color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;letter-spacing:2px;
+  padding:8px 14px;border-radius:4px;cursor:pointer;text-transform:uppercase;transition:all .2s;
+}
+.admin-lock-btn:hover { border-color:var(--accent2);color:var(--accent2); }
+
+/* ===== PAGE NAV ===== */
+.page-nav {
+  display:flex; justify-content:center; gap:8px; padding:16px 16px 0;
+  flex-wrap:wrap; position:relative; z-index:2;
+}
+.page-nav-btn {
+  padding:9px 18px; border:1px solid var(--border); background:var(--surface);
+  color:var(--muted); font-family:'Rajdhani',sans-serif; font-size:13px; font-weight:600;
+  letter-spacing:1px; text-transform:uppercase; cursor:pointer; transition:all .2s;
+  border-radius:4px; position:relative; overflow:hidden;
+}
+.page-nav-btn::after { content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent3),var(--accent));transform:scaleX(0);transition:.2s; }
+.page-nav-btn:hover,.page-nav-btn.active { border-color:var(--accent3);color:var(--accent3);background:var(--surface2); }
+.page-nav-btn:hover::after,.page-nav-btn.active::after { transform:scaleX(1); }
+
+/* ===== VIEWS ===== */
+.page-view { display:none; position:relative; z-index:1; }
+.page-view.active { display:block; }
+#adminView { display:none; }
+
+/* ===== GAME TABS ===== */
+.game-tabs { display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:16px; }
+.tab { padding:10px 18px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;border-radius:4px;position:relative;overflow:hidden; }
+.tab::after { content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent3));transform:scaleX(0);transition:.2s; }
+.tab:hover,.tab.active { border-color:var(--accent);color:var(--accent);background:var(--surface2); }
+.tab:hover::after,.tab.active::after { transform:scaleX(1); }
+
+/* ===== WRAPPER ===== */
+.wrapper { max-width:1000px;margin:0 auto;padding:0 16px 60px; }
+.scores-grid { display:flex;flex-direction:column;gap:14px; }
+
+/* ===== SCORE CARD ===== */
+.score-card { background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;animation:fadeUp .4s ease-out;position:relative;transition:border-color .2s; }
+.score-card:hover { border-color:rgba(0,212,255,.35); }
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+.score-card-top { display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--border); }
+.game-icon { font-size:28px;flex-shrink:0; }
+.match-title { flex:1; }
+.match-name { font-size:17px;font-weight:700;color:var(--text); }
+.match-meta { display:flex;align-items:center;gap:10px;margin-top:4px;flex-wrap:wrap; }
+.match-date { font-size:12px;color:var(--muted);letter-spacing:1px; }
+.match-format-badge { font-size:10px;font-weight:700;letter-spacing:1px;padding:2px 7px;border-radius:2px;text-transform:uppercase;background:rgba(0,212,255,.1);color:var(--accent);border:1px solid rgba(0,212,255,.2); }
+.match-badge { font-family:'Orbitron',monospace;font-size:10px;font-weight:700;padding:4px 10px;border-radius:3px;letter-spacing:1px;text-transform:uppercase;white-space:nowrap; }
+.badge-win { background:rgba(0,255,136,.12);color:var(--accent3);border:1px solid rgba(0,255,136,.3); }
+.badge-loss { background:rgba(255,51,102,.12);color:var(--danger);border:1px solid rgba(255,51,102,.3); }
+.badge-draw { background:rgba(0,212,255,.12);color:var(--accent);border:1px solid rgba(0,212,255,.3); }
+.badge-custom { background:rgba(255,107,0,.15);color:var(--accent2);border:1px solid rgba(255,107,0,.4); }
+.score-card-body { padding:16px 20px; }
+.result-statement { background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-left:3px solid var(--accent);border-radius:4px;padding:10px 14px;font-size:14px;font-weight:600;color:var(--text);margin-bottom:14px;line-height:1.5;font-style:italic; }
+.result-statement.win-stmt { border-left-color:var(--accent3);background:rgba(0,255,136,.05); }
+.result-statement.loss-stmt { border-left-color:var(--danger);background:rgba(255,51,102,.05); }
+.scoreboard { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap; }
+.team-block { flex:1;min-width:100px; }
+.team-block.right { text-align:right; }
+.team-name-display { font-size:15px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.team-score-big { font-family:'Orbitron',monospace;font-size:clamp(26px,5vw,38px);font-weight:900;color:var(--accent);line-height:1.1;margin-top:2px; }
+.team-score-detail { font-size:12px;color:var(--muted);margin-top:3px; }
+.score-center { text-align:center;flex-shrink:0;padding:0 10px; }
+.score-vs { font-family:'Orbitron',monospace;font-size:13px;color:var(--muted);letter-spacing:2px; }
+.score-dash { font-family:'Orbitron',monospace;font-size:22px;color:var(--border); }
+.kill-hero { display:flex;align-items:center;gap:16px;margin-bottom:12px; }
+.kill-number { font-family:'Orbitron',monospace;font-size:clamp(36px,8vw,54px);font-weight:900;color:var(--danger);line-height:1;flex-shrink:0; }
+.kill-number.ff { color:var(--accent2); }
+.kill-info { flex:1; }
+.kill-label { font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:2px; }
+.kill-player { font-size:16px;font-weight:700;color:var(--text);margin-top:2px; }
+.kill-sub { font-size:13px;color:var(--muted);margin-top:2px; }
+.rank-badge { font-family:'Orbitron',monospace;font-size:18px;font-weight:900;color:var(--gold);text-shadow:0 0 12px rgba(255,215,0,.4);flex-shrink:0; }
+.ludo-winner { font-family:'Orbitron',monospace;font-size:clamp(20px,4vw,28px);font-weight:900;color:var(--gold);margin-bottom:10px; }
+.stats-row { margin-top:12px; }
+.stats-label { font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px; }
+.stats-chips { display:flex;flex-wrap:wrap;gap:8px; }
+.chip { background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:6px 12px;font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px; }
+.chip .chip-label { font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block; }
+.chip .chip-val { color:var(--accent3); }
+.card-divider { height:1px;background:var(--border);margin:12px 0; }
+.note-text { margin-top:12px;padding:10px 14px;background:rgba(255,107,0,.07);border:1px solid rgba(255,107,0,.2);border-radius:4px;font-size:13px;color:var(--muted);font-style:italic; }
+.empty-state { text-align:center;padding:60px 20px;color:var(--muted); }
+.empty-state .ei { font-size:48px;margin-bottom:12px; }
+.empty-state p { font-size:14px;letter-spacing:1px; }
+
+/* ===== PLAYER SCORECARD PAGE ===== */
+.page-header { text-align:center;padding:24px 16px 8px;position:relative;z-index:1; }
+.page-header h2 { font-family:'Orbitron',monospace;font-size:clamp(16px,3vw,24px);color:var(--accent3);letter-spacing:3px; }
+.page-header p { font-size:12px;color:var(--muted);letter-spacing:2px;margin-top:4px; }
+
+.player-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;padding:16px; }
+
+.player-card {
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;
+  transition:all .3s;cursor:pointer;
+}
+.player-card:hover { border-color:var(--accent);transform:translateY(-3px);box-shadow:0 12px 30px rgba(0,212,255,.15); }
+.player-card-header {
+  padding:16px 18px;background:linear-gradient(135deg,rgba(0,212,255,.08),rgba(0,255,136,.04));
+  border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;
+}
+.player-avatar {
+  width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent3));
+  display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;
+  font-family:'Orbitron',monospace;font-weight:900;color:#000;font-size:16px;
+}
+.player-info { flex:1; }
+.player-name { font-size:17px;font-weight:700;color:var(--text); }
+.player-role { font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px; }
+.player-card-body { padding:14px 18px; }
+
+.stat-row-mini { display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(28,58,85,.5); }
+.stat-row-mini:last-child { border-bottom:none; }
+.stat-lbl { font-size:11px;color:var(--muted);letter-spacing:1px; }
+.stat-val { font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--accent3); }
+
+/* ===== PLAYER DETAIL MODAL ===== */
+#playerModal {
+  position:fixed;inset:0;background:rgba(6,11,16,.95);z-index:300;
+  display:none;align-items:center;justify-content:center;padding:16px;overflow-y:auto;
+}
+#playerModal.open { display:flex; }
+.modal-box {
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  width:100%;max-width:700px;max-height:90vh;overflow-y:auto;animation:fadeUp .3s ease-out;
+}
+.modal-box::before { content:'';display:block;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent3),var(--accent2)); }
+.modal-header { padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between; }
+.modal-title { font-family:'Orbitron',monospace;font-size:16px;color:var(--accent3);letter-spacing:2px; }
+.modal-close { background:none;border:1px solid var(--border);color:var(--muted);width:32px;height:32px;border-radius:4px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s; }
+.modal-close:hover { border-color:var(--danger);color:var(--danger); }
+.modal-body { padding:20px 24px; }
+
+.section-title { font-size:11px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin:16px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border); }
+
+.stat-table { width:100%;border-collapse:collapse;margin-bottom:12px; }
+.stat-table th { font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;padding:6px 10px;text-align:left;border-bottom:1px solid var(--border); }
+.stat-table td { padding:8px 10px;font-size:14px;border-bottom:1px solid rgba(28,58,85,.4); }
+.stat-table tr:hover td { background:rgba(0,212,255,.03); }
+.stat-highlight { font-family:'Orbitron',monospace;font-size:13px;color:var(--accent3);font-weight:700; }
+
+.totals-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:10px; }
+.total-box { background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center; }
+.total-val { font-family:'Orbitron',monospace;font-size:clamp(18px,3vw,26px);font-weight:900;color:var(--accent);display:block; }
+.total-lbl { font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:4px; }
+
+/* ===== POINT TABLE PAGE ===== */
+.pt-wrapper { max-width:800px;margin:0 auto;padding:16px 16px 60px; }
+.pt-header-row {
+  display:grid;grid-template-columns:30px 1fr 50px 50px 50px 50px 60px 60px;
+  gap:4px;padding:8px 14px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:6px 6px 0 0;
+  font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;font-weight:700;
+}
+.pt-row {
+  display:grid;grid-template-columns:30px 1fr 50px 50px 50px 50px 60px 60px;
+  gap:4px;padding:12px 14px;background:var(--surface);
+  border:1px solid var(--border);border-top:none;align-items:center;transition:all .2s;
+}
+.pt-row:last-child { border-radius:0 0 6px 6px; }
+.pt-row:hover { background:var(--surface2);border-color:rgba(0,212,255,.2); }
+.pt-pos { font-family:'Orbitron',monospace;font-size:13px;font-weight:900;text-align:center; }
+.pos-1 { color:var(--gold); }
+.pos-2 { color:var(--silver); }
+.pos-3 { color:var(--bronze); }
+.pt-team { font-size:15px;font-weight:700;color:var(--text); }
+.pt-num { font-family:'Orbitron',monospace;font-size:13px;color:var(--accent3);text-align:center;font-weight:700; }
+.pt-pts { font-family:'Orbitron',monospace;font-size:15px;color:var(--accent);text-align:center;font-weight:900; }
+.pt-nrr { font-family:'Orbitron',monospace;font-size:11px;text-align:center; }
+
+@media(max-width:500px){
+  .pt-header-row,.pt-row { grid-template-columns:25px 1fr 38px 38px 38px 38px 46px 46px;padding:8px 10px;gap:2px; }
+  .pt-team { font-size:13px; }
+  .pt-num { font-size:11px; }
+}
+
+/* ===== MEMORIES PAGE ===== */
+.memories-wrapper { max-width:1000px;margin:0 auto;padding:16px 16px 60px; }
+.upload-zone {
+  background:var(--surface);border:2px dashed var(--border);border-radius:12px;
+  padding:36px 20px;text-align:center;cursor:pointer;transition:all .3s;margin-bottom:24px;
+}
+.upload-zone:hover,.upload-zone.dragover { border-color:var(--accent);background:rgba(0,212,255,.04); }
+.upload-zone-icon { font-size:40px;margin-bottom:12px; }
+.upload-zone-title { font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px; }
+.upload-zone-sub { font-size:12px;color:var(--muted);letter-spacing:1px; }
+#memFileInput { display:none; }
+
+.mem-name-row { display:flex;gap:10px;margin-bottom:16px; }
+.mem-name-row input { flex:1; }
+.mem-upload-btn { padding:10px 20px;background:linear-gradient(135deg,var(--accent),var(--accent3));border:none;color:#000;font-family:'Orbitron',monospace;font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;border-radius:4px;white-space:nowrap;transition:all .2s; }
+.mem-upload-btn:disabled { opacity:.5;cursor:not-allowed; }
+
+.memories-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px; }
+.memory-item { background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;animation:fadeUp .4s ease-out;transition:all .2s; }
+.memory-item:hover { border-color:rgba(0,212,255,.35);transform:translateY(-2px); }
+.memory-item img { width:100%;aspect-ratio:1;object-fit:cover;display:block; }
+.memory-item-footer { padding:8px 12px; }
+.memory-uploader { font-size:13px;font-weight:700;color:var(--text); }
+.memory-time { font-size:11px;color:var(--muted);margin-top:2px; }
+.memory-delete-btn { background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.2);color:var(--danger);font-size:10px;padding:3px 8px;border-radius:3px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;margin-top:6px; }
+
+/* ===== ADMIN PANEL ===== */
+.admin-wrapper { max-width:700px;margin:0 auto;padding:20px 16px 80px; }
+.admin-header { text-align:center;margin-bottom:24px; }
+.admin-title { font-family:'Orbitron',monospace;font-size:18px;color:var(--accent2);letter-spacing:3px; }
+.admin-tabs { display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap; }
+.admin-tab { padding:9px 16px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;border-radius:4px;transition:all .2s; }
+.admin-tab.active { border-color:var(--accent2);color:var(--accent2); }
+
+.card { background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:20px; }
+.card::before { content:'';display:block;height:2px;background:linear-gradient(90deg,var(--accent2),var(--gold)); }
+.card-body { padding:20px; }
+.form-group { margin-bottom:14px; }
+label { display:block;font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;font-weight:600; }
+input,select,textarea { width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:500;padding:10px 14px;border-radius:4px;outline:none;transition:border-color .2s; }
+input:focus,select:focus,textarea:focus { border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,212,255,.1); }
+select option { background:var(--bg); }
+textarea { resize:vertical;min-height:60px;line-height:1.5; }
+.form-row { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+@media(max-width:480px){ .form-row { grid-template-columns:1fr; } }
+.game-fields { display:none; }
+.game-fields.active { display:block; }
+.result-hint { font-size:11px;color:var(--muted);margin-top:5px;font-style:italic;letter-spacing:.5px; }
+.result-examples { display:flex;flex-wrap:wrap;gap:6px;margin-top:8px; }
+.result-ex-btn { background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:11px;padding:3px 9px;border-radius:3px;cursor:pointer;transition:all .2s; }
+.result-ex-btn:hover { border-color:var(--accent);color:var(--accent); }
+.btn { width:100%;padding:13px;background:linear-gradient(135deg,var(--accent2),#ff9500);border:none;color:#000;font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;border-radius:4px;margin-top:6px;transition:all .2s; }
+.btn:hover { transform:translateY(-1px);box-shadow:0 8px 25px rgba(255,107,0,.4); }
+.btn-danger { background:linear-gradient(135deg,var(--danger),#cc0033); }
+.btn-danger:hover { box-shadow:0 8px 25px rgba(255,51,102,.4); }
+.btn:disabled { opacity:.5;cursor:not-allowed;transform:none; }
+.btn-accent { background:linear-gradient(135deg,var(--accent),var(--accent3)); }
+.btn-accent:hover { box-shadow:0 8px 25px rgba(0,212,255,.4); }
+
+/* ===== AUTO CALC DISPLAY ===== */
+.auto-calc-box {
+  background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.2);border-radius:6px;
+  padding:12px 16px;margin-top:12px;
+}
+.auto-calc-title { font-size:10px;color:var(--accent3);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700; }
+.calc-chips { display:flex;flex-wrap:wrap;gap:6px; }
+.calc-chip { background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:4px 10px;font-size:12px;font-family:'Orbitron',monospace;color:var(--accent3); }
+
+/* Login */
+#loginOverlay { position:fixed;inset:0;background:rgba(6,11,16,.95);display:flex;align-items:center;justify-content:center;z-index:200; }
+.login-box { background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:36px 30px;width:320px;text-align:center; }
+.login-box::before { content:'';display:block;height:2px;background:linear-gradient(90deg,var(--accent2),var(--gold));margin:-36px -30px 28px; }
+.login-title { font-family:'Orbitron',monospace;font-size:16px;color:var(--accent2);letter-spacing:3px;margin-bottom:20px; }
+.login-box input { margin-bottom:14px;text-align:center;letter-spacing:4px;font-size:18px; }
+.login-error { color:var(--danger);font-size:13px;margin-top:8px;display:none; }
+
+/* Toast */
+#toast { position:fixed;bottom:24px;right:24px;z-index:400;background:var(--surface2);border:1px solid var(--accent3);border-left:4px solid var(--accent3);color:var(--text);padding:13px 18px;border-radius:4px;font-size:14px;font-weight:600;transform:translateX(150%);transition:transform .3s ease;box-shadow:0 10px 30px rgba(0,0,0,.5); }
+#toast.show { transform:translateX(0); }
+
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--border);border-radius:3px; }
+
+footer { text-align:center;padding:20px;color:var(--muted);font-size:11px;letter-spacing:2px;text-transform:uppercase;border-top:1px solid var(--border);position:relative;z-index:1; }
+
+/* Admin section tabs */
+.admin-section { display:none; }
+.admin-section.active { display:block; }
+
+.section-badge { display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-left:6px;vertical-align:middle; }
+.badge-new { background:rgba(0,255,136,.15);color:var(--accent3);border:1px solid rgba(0,255,136,.3); }
+
+/* Preview img */
+#imgPreview { display:none;width:100%;max-height:180px;object-fit:contain;border-radius:6px;border:1px solid var(--border);margin-top:8px; }
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<div id="loadingBanner">⚡ Connecting to Firebase…</div>
+
+<!-- Live Clock -->
+<div id="liveClock">
+  <div class="clock-dot"></div>
+  <div>
+    <div id="clockTime">--:--:--</div>
+    <div id="clockDate">IST</div>
+  </div>
+</div>
+
+<button class="admin-lock-btn" onclick="_toggleAdminAccess()">🔐 Admin</button>
+
+<!-- ===================== PUBLIC VIEW ===================== -->
+<div id="publicView">
+  <header>
+    <div class="logo">⚡ GAMEZONE SCORES</div>
+    <div class="tagline">Live Match Results · Updated by Admin</div>
+  </header>
+
+  <div id="refreshBar">
+    <div class="refresh-dot"></div>
+    <span class="refresh-text">Live · Refreshes in</span>
+    <span class="refresh-countdown" id="refreshCountdown">30s</span>
+    <div class="refresh-spin" id="refreshSpin"></div>
+  </div>
+
+  <!-- PAGE NAV -->
+  <div class="page-nav">
+    <button class="page-nav-btn active" onclick="_showPage('scores',this)">🏆 Scores</button>
+    <button class="page-nav-btn" onclick="_showPage('players',this)">👤 Player Cards</button>
+    <button class="page-nav-btn" onclick="_showPage('points',this)">📊 Point Table</button>
+    <button class="page-nav-btn" onclick="_showPage('memories',this)">📸 MPL Memories</button>
+  </div>
+
+  <!-- ===== SCORES PAGE ===== -->
+  <div id="page-scores" class="page-view active">
+    <div class="game-tabs" id="pubTabs">
+      <button class="tab active" onclick="_filterPub('all',this)">🏆 All</button>
+      <button class="tab" onclick="_filterPub('cricket',this)">🏏 Cricket</button>
+      <button class="tab" onclick="_filterPub('football',this)">⚽ Football</button>
+      <button class="tab" onclick="_filterPub('efootball',this)">🎮 eFootball</button>
+      <button class="tab" onclick="_filterPub('ludo',this)">🎲 Ludo</button>
+      <button class="tab" onclick="_filterPub('bgmi',this)">🔫 BGMI</button>
+      <button class="tab" onclick="_filterPub('freefire',this)">🔥 Free Fire</button>
+    </div>
+    <div class="wrapper">
+      <div class="scores-grid" id="publicScores">
+        <div class="empty-state"><div class="ei">⏳</div><p>Loading scores…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PLAYER SCORECARD PAGE ===== -->
+  <div id="page-players" class="page-view">
+    <div class="page-header">
+      <h2>👤 PLAYER SCORECARDS</h2>
+      <p>Individual performance across all games</p>
+    </div>
+    <div class="player-grid" id="playerGrid">
+      <div class="empty-state"><div class="ei">👤</div><p>No player data yet. Admin adds players.</p></div>
+    </div>
+  </div>
+
+  <!-- ===== POINT TABLE PAGE ===== -->
+  <div id="page-points" class="page-view">
+    <div class="page-header">
+      <h2>📊 POINT TABLE</h2>
+      <p>Tournament standings · Auto-calculated</p>
+    </div>
+    <div class="pt-wrapper">
+      <div id="pointTableContainer">
+        <div class="empty-state"><div class="ei">📊</div><p>No point table data yet.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MEMORIES PAGE ===== -->
+  <div id="page-memories" class="page-view">
+    <div class="page-header">
+      <h2>📸 MPL MEMORIES</h2>
+      <p>Upload your MPL selfies &amp; moments — everyone can share!</p>
+    </div>
+    <div class="memories-wrapper">
+      <!-- Upload Section (for all users) -->
+      <div class="card">
+        <div class="card-body">
+          <div style="font-family:'Orbitron',monospace;font-size:13px;color:var(--accent3);letter-spacing:2px;margin-bottom:14px;">📤 SHARE YOUR MOMENT</div>
+          <div class="form-group">
+            <label>Your Name</label>
+            <input type="text" id="mem_uploader" placeholder="Enter your name">
+          </div>
+          <div class="form-group">
+            <label>Caption (optional)</label>
+            <input type="text" id="mem_caption" placeholder="What's this moment about?">
+          </div>
+          <div class="upload-zone" id="uploadZone" onclick="document.getElementById('memFileInput').click()">
+            <div class="upload-zone-icon">📷</div>
+            <div class="upload-zone-title">Tap to Choose Photo</div>
+            <div class="upload-zone-sub">JPG, PNG, GIF · Max 5MB</div>
+            <img id="imgPreview" alt="preview">
+          </div>
+          <input type="file" id="memFileInput" accept="image/*" onchange="_previewImg(this)">
+          <button class="btn btn-accent" id="uploadMemBtn" onclick="_uploadMemory()">📸 UPLOAD MEMORY</button>
+        </div>
+      </div>
+      <div class="memories-grid" id="memoriesGrid">
+        <div class="empty-state" style="grid-column:1/-1"><div class="ei">📸</div><p>No memories yet. Be the first to upload!</p></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end publicView -->
+
+<!-- ===================== ADMIN VIEW ===================== -->
+<div id="adminView">
+  <header>
+    <div class="logo" style="font-size:clamp(18px,4vw,32px);">⚙️ ADMIN PANEL</div>
+    <div class="tagline">Full Control Centre</div>
+    <div id="adminUserEmail" style="font-size:11px;color:var(--accent3);letter-spacing:1px;margin-top:6px;"></div>
+  </header>
+  <div class="admin-wrapper">
+    <div class="admin-tabs">
+      <button class="admin-tab active" onclick="_adminTab('match',this)">🏆 Match Result</button>
+      <button class="admin-tab" onclick="_adminTab('player',this)">👤 Player Card</button>
+      <button class="admin-tab" onclick="_adminTab('points',this)">📊 Point Table</button>
+      <button class="admin-tab" onclick="_adminTab('manage',this)">🗂 Manage</button>
+    </div>
+
+    <!-- ===== MATCH RESULT SECTION ===== -->
+    <div class="admin-section active" id="admin-match">
+      <div class="card">
+        <div class="card-body">
+          <div style="font-family:'Orbitron',monospace;font-size:14px;color:var(--accent2);letter-spacing:2px;margin-bottom:16px;">➕ ADD MATCH RESULT</div>
+          <div class="form-group">
+            <label>Select Game</label>
+            <select id="gameSelect" onchange="_showGameFields()">
+              <option value="">-- Choose Game --</option>
+              <option value="cricket">🏏 Cricket</option>
+              <option value="football">⚽ Football</option>
+              <option value="efootball">🎮 eFootball</option>
+              <option value="ludo">🎲 Ludo</option>
+              <option value="bgmi">🔫 BGMI</option>
+              <option value="freefire">🔥 Free Fire</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Match / Event Title</label>
+            <input type="text" id="matchTitle" placeholder="e.g. Finals, Tournament R1, Friendly...">
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Date</label><input type="date" id="matchDate"></div>
+            <div class="form-group">
+              <label>Result Statement</label>
+              <input type="text" id="matchResult" placeholder="e.g. Won by 25 runs">
+              <div class="result-hint">Write what happened</div>
+              <div class="result-examples">
+                <button class="result-ex-btn" onclick="_fillResult('Won by 25 runs')">Won by 25 runs</button>
+                <button class="result-ex-btn" onclick="_fillResult('Lost by 3 wickets')">Lost by 3 wkts</button>
+                <button class="result-ex-btn" onclick="_fillResult('Match Drawn')">Drawn</button>
+                <button class="result-ex-btn" onclick="_fillResult('Won by 2 goals')">Won by 2 goals</button>
+                <button class="result-ex-btn" onclick="_fillResult('Booyah! #1 Finish')">Booyah!</button>
+                <button class="result-ex-btn" onclick="_fillResult('Chicken Dinner 🍗')">Chicken Dinner</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- CRICKET FIELDS -->
+          <div class="game-fields" id="fields-cricket">
+            <div style="border-top:1px solid var(--border);margin:14px 0;padding-top:14px;">
+              <div style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">🏏 CRICKET DETAILS</div>
+              <div class="form-row">
+                <div class="form-group"><label>Team 1 Name</label><input type="text" id="cr_team1" placeholder="e.g. Warriors XI"></div>
+                <div class="form-group"><label>Team 2 Name</label><input type="text" id="cr_team2" placeholder="e.g. Challengers"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Team 1 Score (runs/wkts)</label><input type="text" id="cr_score1" placeholder="185/4"></div>
+                <div class="form-group"><label>Team 2 Score (runs/wkts)</label><input type="text" id="cr_score2" placeholder="160/8"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Overs Played</label><input type="text" id="cr_overs" placeholder="20 overs"></div>
+                <div class="form-group"><label>Format</label><select id="cr_format"><option>T20</option><option>ODI</option><option>Test</option><option>T10</option></select></div>
+              </div>
+              <div class="form-group"><label>Top Scorer (runs)</label><input type="text" id="cr_topbat" placeholder="e.g. Rahul — 78 runs (6 fours, 2 sixes)"></div>
+              <div class="form-group"><label>Top Bowler (wickets)</label><input type="text" id="cr_topball" placeholder="e.g. Arjun — 3/24 (4 overs)"></div>
+              <div class="form-group"><label>Man of the Match</label><input type="text" id="cr_motm" placeholder="Player name & performance"></div>
+            </div>
+          </div>
+
+          <!-- FOOTBALL FIELDS -->
+          <div class="game-fields" id="fields-football">
+            <div style="border-top:1px solid var(--border);margin:14px 0;padding-top:14px;">
+              <div style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">⚽ FOOTBALL DETAILS</div>
+              <div class="form-row">
+                <div class="form-group"><label>Team 1 Name</label><input type="text" id="fb_team1" placeholder="e.g. Red Eagles"></div>
+                <div class="form-group"><label>Team 2 Name</label><input type="text" id="fb_team2" placeholder="e.g. Blue Lions"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Team 1 Goals</label><input type="number" id="fb_goals1" placeholder="3" min="0"></div>
+                <div class="form-group"><label>Team 2 Goals</label><input type="number" id="fb_goals2" placeholder="1" min="0"></div>
+              </div>
+              <div class="form-group"><label>Goal Scorers (Team 1)</label><input type="text" id="fb_scorers1" placeholder="e.g. Rahul 23', Amit 67'"></div>
+              <div class="form-group"><label>Goal Scorers (Team 2)</label><input type="text" id="fb_scorers2" placeholder="e.g. Vikram 89'"></div>
+              <div class="form-group"><label>Man of the Match</label><input type="text" id="fb_motm" placeholder="Player name"></div>
+            </div>
+          </div>
+
+          <!-- EFOOTBALL FIELDS -->
+          <div class="game-fields" id="fields-efootball">
+            <div style="border-top:1px solid var(--border);margin:14px 0;padding-top:14px;">
+              <div style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">🎮 eFOOTBALL DETAILS</div>
+              <div class="form-row">
+                <div class="form-group"><label>Player 1 (You)</label><input type="text" id="ef_player" placeholder="Your username"></div>
+                <div class="form-group"><label>Player 2 (Opponent)</label><input type="text" id="ef_opp" placeholder="Opponent username"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Player 1 Goals</label><input type="number" id="ef_g1" placeholder="4" min="0"></div>
+                <div class="form-group"><label>Player 2 Goals</label><input type="number" id="ef_g2" placeholder="2" min="0"></div>
+              </div>
+              <div class="form-group"><label>Mode</label><select id="ef_mode"><option>Online Match</option><option>League</option><option>Cup</option><option>Friendly</option></select></div>
+            </div>
+          </div>
+
+          <!-- LUDO FIELDS -->
+          <div class="game-fields" id="fields-ludo">
+            <div style="border-top:1px solid var(--border);margin:14px 0;padding-top:14px;">
+              <div style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">🎲 LUDO DETAILS</div>
+              <div class="form-row">
+                <div class="form-group"><label>Winner Name</label><input type="text" id="ld_winner" placeholder="Player who won"></div>
+                <div class="form-group"><label>No. of Players</label><select id="ld_players"><option>2</option><option>3</option><option selected>4</option></select></div>
+              </div>
+              <div class="form-group"><label>All Players (in order)</label><input type="text" id="ld_others" placeholder="e.g. Amit (1st), Ravi (2nd), Sona (3rd)"></div>
+              <div class="form-group"><label>Winning Detail</label><input type="text" id="ld_pieces" placeholder="e.g. All 4 pieces home"></div>
+            </div>
+          </div>
+
+          <!-- BGMI FIELDS -->
+          <div class="game-fields" id="fields-bgmi">
+            <div style="border-top:1px solid var(--border);margin:14px 0;padding-top:14px;">
+              <div style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">🔫 BGMI DETAILS</div>
+              <div class="form-row">
+                <div class="form-group"><label>Player / Team Name</label><input type="text" id="bg_player" placeholder="IGN / Team"></div>
+                <div class="form-group"><label>Mode</label><select id="bg_mode"><option>Squad</option><option>Duo</option><option>Solo</option><option>TDM</option></select></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Total Kills</label><input type="number" id="bg_kills" placeholder="12" min="0"></div>
+                <div class="form-group"><label>Final Position</label><input type="text" id="bg_rank" placeholder="e.g. #1, #3"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Damage Dealt</label><input type="text" id="bg_dmg" placeholder="e.g. 2450"></div>
+                <div class="form-group"><label>Map</label><select id="bg_map"><option>Erangel</option><option>Miramar</option><option>Sanhok</option><option>Vikendi</option><option>Livik</option></select></div>
+              </div>
+              <div class="form-group"><label>Survival Time</label><input type="text" id="bg_time" placeholder="e.g. 28:45"></div>
+            </div>
+          </div>
+
+          <!-- FREE FIRE FIELDS -->
+          <div class="game-fields" id="fields-freefire">
+            <div style="border-top:1px solid var(--border);margin:14px 0;padding-top:14px;">
+              <div style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">🔥 FREE FIRE DETAILS</div>
+              <div class="form-row">
+                <div class="form-group"><label>Player / Team Name</label><input type="text" id="ff_player" placeholder="IGN / Team"></div>
+                <div class="form-group"><label>Mode</label><select id="ff_mode"><option>Squad</option><option>Duo</option><option>Solo</option><option>Clash Squad</option><option>Ranked</option></select></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Kill Count</label><input type="number" id="ff_kills" placeholder="15" min="0"></div>
+                <div class="form-group"><label>Placement</label><input type="text" id="ff_rank" placeholder="e.g. #1 Booyah!"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Damage Dealt</label><input type="text" id="ff_dmg" placeholder="e.g. 3200"></div>
+                <div class="form-group"><label>Survival Time</label><input type="text" id="ff_time" placeholder="e.g. 28:45"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:14px;">
+            <label>Match Summary / Extra Note (optional)</label>
+            <textarea id="matchNote" placeholder="Write a summary of the match, key moments, or extra info..."></textarea>
+          </div>
+          <button class="btn" id="postBtn" onclick="_addScore()">➕ POST MATCH RESULT</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PLAYER CARD SECTION ===== -->
+    <div class="admin-section" id="admin-player">
+      <div class="card">
+        <div class="card-body">
+          <div style="font-family:'Orbitron',monospace;font-size:14px;color:var(--accent3);letter-spacing:2px;margin-bottom:16px;">👤 ADD / UPDATE PLAYER SCORECARD</div>
+
+          <!-- SPORT SELECTOR -->
+          <div class="form-row" style="margin-bottom:4px;">
+            <div class="form-group">
+              <label>Sport</label>
+              <select id="pl_sport" onchange="_showPlayerSportFields()">
+                <option value="cricket">🏏 Cricket</option>
+                <option value="football">⚽ Football</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Team Name</label><input type="text" id="pl_team" placeholder="e.g. Warriors XI"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Player Name</label><input type="text" id="pl_name" placeholder="Full name"></div>
+            <div class="form-group">
+              <label>Role / Position</label>
+              <select id="pl_role">
+                <option>All-Rounder</option><option>Batsman</option><option>Bowler</option><option>Wicket Keeper</option><option>Captain</option>
+                <option disabled>── Football ──</option>
+                <option>Striker</option><option>Midfielder</option><option>Defender</option><option>Goalkeeper</option><option>Winger</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group"><label>Emoji / Avatar Letter</label><input type="text" id="pl_avatar" placeholder="e.g. R (first letter) or 🏏"></div>
+
+          <!-- ===== CRICKET FIELDS ===== -->
+          <div id="cricket-fields">
+          <div style="border-top:1px solid var(--border);margin:14px 0;padding-top:14px;">
+            <div style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">🏏 BATTING STATS</div>
+            <div class="form-row">
+              <div class="form-group"><label>Matches Played</label><input type="number" id="pl_bat_matches" placeholder="10" min="0" oninput="_calcPlayerTotals()"></div>
+              <div class="form-group"><label>Innings</label><input type="number" id="pl_bat_innings" placeholder="9" min="0" oninput="_calcPlayerTotals()"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Total Runs</label><input type="number" id="pl_bat_runs" placeholder="350" min="0" oninput="_calcPlayerTotals()"></div>
+              <div class="form-group"><label>Balls Faced</label><input type="number" id="pl_bat_balls" placeholder="280" min="0" oninput="_calcPlayerTotals()"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Highest Score</label><input type="text" id="pl_bat_hs" placeholder="e.g. 78*"></div>
+              <div class="form-group"><label>Not Outs</label><input type="number" id="pl_bat_notout" placeholder="2" min="0" oninput="_calcPlayerTotals()"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Fours (4s)</label><input type="number" id="pl_bat_fours" placeholder="24" min="0" oninput="_calcPlayerTotals()"></div>
+              <div class="form-group"><label>Sixes (6s)</label><input type="number" id="pl_bat_sixes" placeholder="8" min="0" oninput="_calcPlayerTotals()"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>50s</label><input type="number" id="pl_bat_50s" placeholder="2" min="0"></div>
+              <div class="form-group"><label>100s</label><input type="number" id="pl_bat_100s" placeholder="0" min="0"></div>
+            </div>
+            <!-- Auto-calc -->
+            <div class="auto-calc-box" id="batCalcBox">
+              <div class="auto-calc-title">⚡ Auto Calculated</div>
+              <div class="calc-chips" id="batCalcChips">—</div>
+            </div>
+          </div>
+
+          <div style="border-top:1px solid var(--border);margin:14px 0;padding-top:14px;">
+            <div style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">⚡ BOWLING STATS</div>
+            <div class="form-row">
+              <div class="form-group"><label>Overs Bowled</label><input type="number" id="pl_bowl_overs" placeholder="18" step="0.1" min="0" oninput="_calcPlayerTotals()"></div>
+              <div class="form-group"><label>Maidens</label><input type="number" id="pl_bowl_maidens" placeholder="1" min="0"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Runs Conceded</label><input type="number" id="pl_bowl_runs" placeholder="120" min="0" oninput="_calcPlayerTotals()"></div>
+              <div class="form-group"><label>Wickets Taken</label><input type="number" id="pl_bowl_wickets" placeholder="8" min="0" oninput="_calcPlayerTotals()"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Best Bowling</label><input type="text" id="pl_bowl_best" placeholder="e.g. 3/18"></div>
+              <div class="form-group"><label>No Balls / Wides</label><input type="text" id="pl_bowl_extras" placeholder="e.g. 2nb / 5wd"></div>
+            </div>
+            <div class="auto-calc-box" id="bowlCalcBox">
+              <div class="auto-calc-title">⚡ Auto Calculated</div>
+              <div class="calc-chips" id="bowlCalcChips">—</div>
+            </div>
+          </div>
+
+          <div style="border-top:1px solid var(--border);margin:14px 0;padding-top:14px;">
+            <div style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">🎯 FIELDING &amp; OTHER</div>
+            <div class="form-row">
+              <div class="form-group"><label>Catches</label><input type="number" id="pl_catches" placeholder="5" min="0"></div>
+              <div class="form-group"><label>Run Outs</label><input type="number" id="pl_runouts" placeholder="1" min="0"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Stumpings (WK)</label><input type="number" id="pl_stumpings" placeholder="2" min="0"></div>
+              <div class="form-group"><label>Man of Match Awards</label><input type="number" id="pl_motm" placeholder="1" min="0"></div>
+            </div>
+          </div>
+          </div><!-- end cricket-fields -->
+
+          <!-- ===== FOOTBALL FIELDS ===== -->
+          <div id="football-fields" style="display:none;">
+          <div style="border-top:1px solid var(--border);margin:14px 0;padding-top:14px;">
+            <div style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">⚽ FOOTBALL STATS</div>
+            <div class="form-row">
+              <div class="form-group"><label>Matches Played</label><input type="number" id="fb_matches" placeholder="10" min="0"></div>
+              <div class="form-group"><label>Goals Scored</label><input type="number" id="fb_goals" placeholder="8" min="0"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Assists</label><input type="number" id="fb_assists" placeholder="5" min="0"></div>
+              <div class="form-group"><label>Saves (Goalkeeper)</label><input type="number" id="fb_saves" placeholder="0" min="0"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Yellow Cards</label><input type="number" id="fb_yellow" placeholder="2" min="0"></div>
+              <div class="form-group"><label>Red Cards</label><input type="number" id="fb_red" placeholder="0" min="0"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Clean Sheets</label><input type="number" id="fb_cleansheets" placeholder="3" min="0"></div>
+              <div class="form-group"><label>Man of Match Awards</label><input type="number" id="fb_motm" placeholder="1" min="0"></div>
+            </div>
+          </div>
+          </div><!-- end football-fields -->
+
+          <div class="form-group">
+            <label>Notes / Highlights</label>
+            <textarea id="pl_notes" placeholder="Any notable performances, comments..."></textarea>
+          </div>
+          <div id="editBanner" style="display:none;background:rgba(255,107,0,.12);border:1px solid rgba(255,107,0,.3);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--accent2);margin-bottom:10px;letter-spacing:1px;">✏️ EDIT MODE — Updating existing player card</div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-accent" id="savePlayerBtn" onclick="_savePlayer()" style="flex:1;">💾 SAVE PLAYER CARD</button>
+            <button id="cancelEditBtn" onclick="_cancelEdit()" style="display:none;flex:0 0 auto;background:rgba(255,51,102,.15);border:1px solid rgba(255,51,102,.3);color:var(--danger);padding:10px 16px;border-radius:6px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;">✕ Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== POINT TABLE SECTION ===== -->
+    <div class="admin-section" id="admin-points">
+      <div class="card">
+        <div class="card-body">
+          <div style="font-family:'Orbitron',monospace;font-size:14px;color:var(--gold);letter-spacing:2px;margin-bottom:16px;">📊 POINT TABLE ENTRY</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Add each team's record. Points are auto-calculated (2 per win, 0 per loss, 1 per NR/draw).</div>
+
+          <div class="form-row">
+            <div class="form-group"><label>Team Name</label><input type="text" id="pt_team" placeholder="e.g. Warriors XI"></div>
+            <div class="form-group"><label>Matches Played</label><input type="number" id="pt_mp" placeholder="6" min="0" oninput="_calcPT()"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Wins</label><input type="number" id="pt_w" placeholder="4" min="0" oninput="_calcPT()"></div>
+            <div class="form-group"><label>Losses</label><input type="number" id="pt_l" placeholder="2" min="0" oninput="_calcPT()"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>No Result / Drawn</label><input type="number" id="pt_nr" placeholder="0" min="0" oninput="_calcPT()"></div>
+            <div class="form-group"><label>NRR (optional)</label><input type="text" id="pt_nrr" placeholder="e.g. +0.754"></div>
+          </div>
+          <div class="auto-calc-box">
+            <div class="auto-calc-title">⚡ Auto Points</div>
+            <div class="calc-chips" id="ptCalcChips">—</div>
+          </div>
+          <button class="btn" style="margin-top:14px;" onclick="_savePTEntry()">➕ ADD TEAM TO TABLE</button>
+
+          <div style="margin-top:20px;">
+            <div style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Current Entries — <span style="color:var(--danger);cursor:pointer;" onclick="_clearPT()">Clear All</span></div>
+            <div id="ptAdminList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MANAGE SECTION ===== -->
+    <div class="admin-section" id="admin-manage">
+      <div class="card">
+        <div class="card-body">
+          <div style="font-family:'Orbitron',monospace;font-size:12px;color:var(--accent);letter-spacing:2px;margin-bottom:14px;">📋 MATCH ENTRIES</div>
+          <div id="adminList"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <div style="font-family:'Orbitron',monospace;font-size:12px;color:var(--accent3);letter-spacing:2px;margin-bottom:14px;">👤 PLAYER ENTRIES</div>
+          <div id="adminPlayerList"></div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-danger" onclick="_logoutAdmin()">🔒 LOGOUT ADMIN</button>
+  </div>
+</div><!-- end adminView -->
+
+<!-- Login Overlay -->
+<div id="loginOverlay" style="display:none;">
+  <div class="login-box">
+    <div class="login-title">🔐 ADMIN LOGIN</div>
+    <div style="font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:16px;">Firebase Secured · Admin Only</div>
+    <input type="email" id="adminEmail" placeholder="Admin Email" style="margin-bottom:10px;text-align:center;font-size:15px;letter-spacing:1px;">
+    <input type="password" id="adminPass" placeholder="Password" onkeydown="if(event.key==='Enter')_checkPass()" style="margin-bottom:14px;text-align:center;letter-spacing:4px;font-size:18px;">
+    <button class="btn" id="loginBtn" onclick="_checkPass()">🔐 LOGIN</button>
+    <div class="login-error" id="loginError">❌ Wrong email or password!</div>
+    <button onclick="document.getElementById('loginOverlay').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;margin-top:12px;font-family:'Rajdhani',sans-serif;">Cancel</button>
+  </div>
+</div>
+
+<!-- Player Detail Modal -->
+<div id="playerModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Player Details</div>
+      <button class="modal-close" onclick="_closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<footer>GameZone Scores · Live Scoreboard · MPL Memories</footer>
+
+<!-- ===== FIREBASE ===== -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, deleteDoc, doc,
+  onSnapshot, query, orderBy, serverTimestamp, setDoc, getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getStorage, ref, uploadBytes, getDownloadURL, deleteObject
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+import {
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+// ===== CONFIG =====
+const firebaseConfig = {
+  apiKey: "AIzaSyAs3lfy7wTtoWPh1jdpU8CH6E8WxQt6GLg",
+  authDomain: "gamezone-7c30e.firebaseapp.com",
+  projectId: "gamezone-7c30e",
+  storageBucket: "gamezone-7c30e.firebasestorage.app",
+  messagingSenderId: "284313600013",
+  appId: "1:284313600013:web:3f3c7403ee42ab7c319544",
+  measurementId: "G-X0V97PVTVK"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+const storage = getStorage(app);
+const auth = getAuth(app);
+const scoresCol   = collection(db, 'scores');
+const playersCol  = collection(db, 'players');
+const memoriesCol = collection(db, 'memories');
+const ptCol       = collection(db, 'pointtable');
+
+let scores = [], players = [], memories = [], pointTable = [];
+let currentFilter = 'all';
+let adminLoggedIn = false;
+let currentUser = null;
+let selectedFile = null;
+
+// ===== FIREBASE AUTH STATE =====
+onAuthStateChanged(auth, (user) => {
+  currentUser = user;
+  if (user) {
+    adminLoggedIn = true;
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('publicView').style.display = 'none';
+    document.getElementById('adminView').style.display = 'block';
+    document.querySelector('.admin-lock-btn').textContent = '🔓 Exit Admin';
+    document.getElementById('adminUserEmail').textContent = user.email;
+    renderAdminList(); renderAdminPlayerList(); renderPTAdminList();
+    document.getElementById('matchDate').value = new Date().toISOString().split('T')[0];
+  } else {
+    adminLoggedIn = false;
+    currentUser = null;
+  }
+});
+
+// ===== LIVE IST CLOCK =====
+function startClock() {
+  function tick() {
+    const now = new Date();
+    const ist = new Date(now.toLocaleString('en-US', {timeZone:'Asia/Kolkata'}));
+    const h = String(ist.getHours()).padStart(2,'0');
+    const m = String(ist.getMinutes()).padStart(2,'0');
+    const s = String(ist.getSeconds()).padStart(2,'0');
+    document.getElementById('clockTime').textContent = `${h}:${m}:${s}`;
+    const d = ist.toLocaleDateString('en-IN', {weekday:'short', day:'numeric', month:'short'});
+    document.getElementById('clockDate').textContent = d + ' IST';
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+startClock();
+
+// ===== AUTO-REFRESH COUNTDOWN =====
+const REFRESH_INTERVAL = 30;
+let refreshTimer = REFRESH_INTERVAL;
+let refreshInterval = null;
+function startRefreshCountdown() {
+  if (refreshInterval) clearInterval(refreshInterval);
+  refreshTimer = REFRESH_INTERVAL;
+  updateCountdownDisplay();
+  refreshInterval = setInterval(() => {
+    refreshTimer--;
+    if (refreshTimer <= 0) { refreshTimer = REFRESH_INTERVAL; triggerRefresh(); }
+    updateCountdownDisplay();
+  }, 1000);
+}
+function updateCountdownDisplay() {
+  const el = document.getElementById('refreshCountdown');
+  if (el) el.textContent = refreshTimer + 's';
+}
+function triggerRefresh() {
+  const spin = document.getElementById('refreshSpin');
+  if (spin) spin.classList.add('active');
+  renderPublic();
+  setTimeout(() => { if (spin) spin.classList.remove('active'); }, 600);
+}
+
+// ===== REAL-TIME LISTENERS =====
+const q = query(scoresCol, orderBy('createdAt','desc'));
+onSnapshot(q, (snap) => {
+  scores = snap.docs.map(d => ({firestoreId:d.id, ...d.data()}));
+  document.getElementById('loadingBanner').style.display = 'none';
+  renderPublic();
+  if (adminLoggedIn) renderAdminList();
+  refreshTimer = REFRESH_INTERVAL;
+  updateCountdownDisplay();
+}, err => {
+  document.getElementById('loadingBanner').textContent = '⚠️ Connection error – check Firestore rules';
+});
+
+onSnapshot(query(playersCol, orderBy('createdAt','desc')), (snap) => {
+  players = snap.docs.map(d => ({firestoreId:d.id, ...d.data()}));
+  renderPlayerGrid();
+  if (adminLoggedIn) renderAdminPlayerList();
+});
+
+onSnapshot(query(memoriesCol, orderBy('createdAt','desc')), (snap) => {
+  memories = snap.docs.map(d => ({firestoreId:d.id, ...d.data()}));
+  renderMemories();
+});
+
+onSnapshot(query(ptCol, orderBy('pts','desc')), (snap) => {
+  pointTable = snap.docs.map(d => ({firestoreId:d.id, ...d.data()}));
+  renderPointTable();
+  if (adminLoggedIn) renderPTAdminList();
+});
+
+startRefreshCountdown();
+
+// ===== HELPERS =====
+function esc(str) { return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function toast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3500); }
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr), now = new Date();
+  const diff = Math.floor((now-d)/86400000);
+  if (diff===0) return 'Today';
+  if (diff===1) return 'Yesterday';
+  return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+}
+function resultBadgeClass(r) {
+  if (!r) return 'badge-draw';
+  const v = r.toLowerCase();
+  if (v.includes('won')||v.includes('win')||v.includes('booyah')||v.includes('dinner')||v.includes('#1')) return 'badge-win';
+  if (v.includes('lost')||v.includes('loss')||v.includes('defeat')) return 'badge-loss';
+  if (v.includes('draw')||v.includes('tied')) return 'badge-draw';
+  return 'badge-custom';
+}
+function resultStatementClass(r) {
+  const v=(r||'').toLowerCase();
+  if (v.includes('won')||v.includes('win')||v.includes('booyah')||v.includes('#1')) return 'win-stmt';
+  if (v.includes('lost')||v.includes('loss')||v.includes('defeat')) return 'loss-stmt';
+  return '';
+}
+function badge(result) { return `<span class="match-badge ${resultBadgeClass(result)}">${esc(result||'—')}</span>`; }
+function getVal(id) { return (document.getElementById(id)?.value||'').trim(); }
+function numVal(id) { return parseFloat(document.getElementById(id)?.value||0)||0; }
+
+// ===== PAGE NAVIGATION =====
+window._showPage = function(page, btn) {
+  document.querySelectorAll('.page-view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.page-nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+page)?.classList.add('active');
+  btn?.classList.add('active');
+};
+
+// ===== ADMIN TAB =====
+window._adminTab = function(tab, btn) {
+  document.querySelectorAll('.admin-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.admin-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('admin-'+tab)?.classList.add('active');
+  btn?.classList.add('active');
+};
+
+// ===== RENDER PUBLIC =====
+function renderPublic() {
+  const el = document.getElementById('publicScores');
+  const filtered = currentFilter==='all' ? scores : scores.filter(s=>s.game===currentFilter);
+  if (!filtered.length) { el.innerHTML=`<div class="empty-state"><div class="ei">🏆</div><p>No results yet for this game.</p></div>`; return; }
+  el.innerHTML = filtered.map(renderCard).join('');
+}
+
+// ===== RENDER CARD =====
+function renderCard(s) {
+  const icons = {cricket:'🏏',football:'⚽',efootball:'🎮',ludo:'🎲',bgmi:'🔫',freefire:'🔥'};
+  const d = s.data||{};
+  let body = '';
+  const stmtHtml = s.result ? `<div class="result-statement ${resultStatementClass(s.result)}">📢 ${esc(s.result)}</div>` : '';
+
+  if (s.game==='cricket') {
+    body = `${stmtHtml}
+      <div class="scoreboard">
+        <div class="team-block"><div class="team-name-display">${esc(d.team1||'Team 1')}</div><div class="team-score-big">${esc(d.score1||'—')}</div><div class="team-score-detail">${esc(d.overs||'')}${d.format?' · '+esc(d.format):''}</div></div>
+        <div class="score-center"><div class="score-vs">VS</div></div>
+        <div class="team-block right"><div class="team-name-display">${esc(d.team2||'Team 2')}</div><div class="team-score-big">${esc(d.score2||'—')}</div></div>
+      </div>
+      ${(d.topbat||d.topball||d.motm) ? `<div class="card-divider"></div><div class="stats-row"><div class="stats-label">Key Performances</div><div class="stats-chips">
+        ${d.topbat?`<div class="chip">🏏 <div><div class="chip-label">Top Scorer</div><div class="chip-val">${esc(d.topbat)}</div></div></div>`:''}
+        ${d.topball?`<div class="chip">⚡ <div><div class="chip-label">Top Bowler</div><div class="chip-val">${esc(d.topball)}</div></div></div>`:''}
+        ${d.motm?`<div class="chip">⭐ <div><div class="chip-label">MOTM</div><div class="chip-val">${esc(d.motm)}</div></div></div>`:''}
+      </div></div>`:''}`;
+  } else if (s.game==='football') {
+    body = `${stmtHtml}
+      <div class="scoreboard">
+        <div class="team-block"><div class="team-name-display">${esc(d.team1||'Team 1')}</div><div class="team-score-big">${d.g1??'—'}</div>${d.scorers1?`<div class="team-score-detail">${esc(d.scorers1)}</div>`:''}</div>
+        <div class="score-center"><div class="score-dash">—</div><div class="score-vs" style="font-size:10px;margin-top:4px;">FINAL</div></div>
+        <div class="team-block right"><div class="team-name-display">${esc(d.team2||'Team 2')}</div><div class="team-score-big">${d.g2??'—'}</div>${d.scorers2?`<div class="team-score-detail">${esc(d.scorers2)}</div>`:''}</div>
+      </div>
+      ${d.motm?`<div class="card-divider"></div><div class="stats-chips"><div class="chip">⭐ <div><div class="chip-label">Man of the Match</div><div class="chip-val">${esc(d.motm)}</div></div></div></div>`:''}`;
+  } else if (s.game==='efootball') {
+    body = `${stmtHtml}
+      <div class="scoreboard">
+        <div class="team-block"><div class="team-name-display">${esc(d.player||'Player 1')}</div><div class="team-score-big">${d.g1??'—'}</div></div>
+        <div class="score-center"><div class="score-dash">—</div>${d.mode?`<div class="score-vs" style="font-size:10px;margin-top:4px;">${esc(d.mode)}</div>`:''}</div>
+        <div class="team-block right"><div class="team-name-display">${esc(d.opp||'Opponent')}</div><div class="team-score-big">${d.g2??'—'}</div></div>
+      </div>`;
+  } else if (s.game==='ludo') {
+    body = `${stmtHtml}<div style="margin-bottom:10px;"><div style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Winner</div><div class="ludo-winner">🏆 ${esc(d.winner||'—')}</div></div>
+      <div class="stats-chips">
+        ${d.players?`<div class="chip">👥 <div><div class="chip-label">Players</div><div class="chip-val">${esc(d.players)}</div></div></div>`:''}
+        ${d.others?`<div class="chip">🎲 <div><div class="chip-label">Rankings</div><div class="chip-val">${esc(d.others)}</div></div></div>`:''}
+        ${d.pieces?`<div class="chip">✅ <div><div class="chip-label">Win Detail</div><div class="chip-val">${esc(d.pieces)}</div></div></div>`:''}
+      </div>`;
+  } else if (s.game==='bgmi') {
+    body = `${stmtHtml}
+      <div class="kill-hero"><div class="kill-number">${d.kills??'—'}</div><div class="kill-info"><div class="kill-label">Kills</div><div class="kill-player">${esc(d.player||'—')}</div><div class="kill-sub">${esc(d.mode||'')}${d.map?' · '+esc(d.map):''}</div></div>${d.rank?`<div class="rank-badge">${esc(d.rank)}</div>`:''}</div>
+      <div class="card-divider"></div><div class="stats-chips">
+        ${d.dmg?`<div class="chip">💥 <div><div class="chip-label">Damage</div><div class="chip-val">${esc(d.dmg)}</div></div></div>`:''}
+        ${d.time?`<div class="chip">⏱ <div><div class="chip-label">Survived</div><div class="chip-val">${esc(d.time)}</div></div></div>`:''}
+        ${d.map?`<div class="chip">🗺 <div><div class="chip-label">Map</div><div class="chip-val">${esc(d.map)}</div></div></div>`:''}
+      </div>`;
+  } else if (s.game==='freefire') {
+    body = `${stmtHtml}
+      <div class="kill-hero"><div class="kill-number ff">${d.kills??'—'}</div><div class="kill-info"><div class="kill-label">Kills</div><div class="kill-player">${esc(d.player||'—')}</div><div class="kill-sub">${esc(d.mode||'')}</div></div>${d.rank?`<div class="rank-badge">${esc(d.rank)}</div>`:''}</div>
+      <div class="card-divider"></div><div class="stats-chips">
+        ${d.dmg?`<div class="chip">💥 <div><div class="chip-label">Damage</div><div class="chip-val">${esc(d.dmg)}</div></div></div>`:''}
+        ${d.time?`<div class="chip">⏱ <div><div class="chip-label">Survived</div><div class="chip-val">${esc(d.time)}</div></div></div>`:''}
+      </div>`;
+  }
+
+  const noteHtml = s.note ? `<div class="note-text">💬 ${esc(s.note)}</div>` : '';
+  return `<div class="score-card"><div class="score-card-top"><div class="game-icon">${icons[s.game]||'🎮'}</div><div class="match-title"><div class="match-name">${esc(s.title||'Match')}</div><div class="match-meta"><span class="match-date">${timeAgo(s.date)}</span>${s.game==='cricket'&&s.data?.format?`<span class="match-format-badge">${esc(s.data.format)}</span>`:''}</div></div>${badge(s.result)}</div><div class="score-card-body">${body}${noteHtml}</div></div>`;
+}
+
+// ===== RENDER PLAYER GRID =====
+function renderPlayerGrid() {
+  const el = document.getElementById('playerGrid');
+  if (!players.length) { el.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="ei">👤</div><p>No player data yet.</p></div>`; return; }
+  el.innerHTML = players.map(p => {
+    const av = String(p.avatar||p.name||'?').charAt(0).toUpperCase();
+    const sportIcon = p.sport==='football' ? '⚽' : '🏏';
+    let statsHtml = '';
+    if (p.sport==='football') {
+      const fb = p.football||{};
+      statsHtml = `
+        <div class="stat-row-mini"><span class="stat-lbl">Goals</span><span class="stat-val">${fb.goals||0}</span></div>
+        <div class="stat-row-mini"><span class="stat-lbl">Assists</span><span class="stat-val">${fb.assists||0}</span></div>
+        ${fb.saves ? `<div class="stat-row-mini"><span class="stat-lbl">Saves</span><span class="stat-val">${fb.saves}</span></div>` : ''}
+        <div class="stat-row-mini"><span class="stat-lbl">Matches</span><span class="stat-val">${fb.matches||0}</span></div>
+        <div class="stat-row-mini"><span class="stat-lbl">MOM Awards</span><span class="stat-val">${fb.motm||0}</span></div>`;
+    } else {
+      const bat = p.batting||{}, bowl = p.bowling||{};
+      const batAvg = (bat.innings-bat.notout)>0 ? (bat.runs/(bat.innings-bat.notout)).toFixed(1) : bat.runs||'—';
+      statsHtml = `
+        <div class="stat-row-mini"><span class="stat-lbl">Runs</span><span class="stat-val">${bat.runs||0}</span></div>
+        <div class="stat-row-mini"><span class="stat-lbl">Batting Avg</span><span class="stat-val">${batAvg}</span></div>
+        <div class="stat-row-mini"><span class="stat-lbl">Wickets</span><span class="stat-val">${bowl.wickets||0}</span></div>
+        <div class="stat-row-mini"><span class="stat-lbl">Matches</span><span class="stat-val">${bat.matches||0}</span></div>`;
+    }
+    return `<div class="player-card" onclick="_openPlayer('${p.firestoreId}')">
+      <div class="player-card-header">
+        <div class="player-avatar">${esc(p.avatar&&p.avatar.length===1 ? p.avatar : av)}</div>
+        <div class="player-info">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div class="player-name">${esc(p.name)}</div>
+            <span style="font-size:14px;">${sportIcon}</span>
+          </div>
+          <div class="player-role">${esc(p.role||'Player')}${p.team ? ` · ${esc(p.team)}` : ''}</div>
+        </div>
+      </div>
+      <div class="player-card-body">${statsHtml}</div>
+    </div>`;
+  }).join('');
+}
+
+// ===== OPEN PLAYER MODAL =====
+window._openPlayer = function(id) {
+  const p = players.find(x=>x.firestoreId===id); if (!p) return;
+  const av = String(p.avatar||p.name||'?').charAt(0).toUpperCase();
+  const sportIcon = p.sport==='football' ? '⚽' : '🏏';
+
+  document.getElementById('modalTitle').textContent = `${sportIcon} ${p.name}`;
+
+  let statsHtml = '';
+  if (p.sport === 'football') {
+    const fb = p.football||{};
+    statsHtml = `
+      <div class="section-title">⚽ FOOTBALL STATS</div>
+      <div class="totals-grid">
+        <div class="total-box"><span class="total-val">${fb.matches||0}</span><div class="total-lbl">Matches</div></div>
+        <div class="total-box"><span class="total-val">${fb.goals||0}</span><div class="total-lbl">Goals</div></div>
+        <div class="total-box"><span class="total-val">${fb.assists||0}</span><div class="total-lbl">Assists</div></div>
+        <div class="total-box"><span class="total-val">${fb.saves||0}</span><div class="total-lbl">Saves (GK)</div></div>
+        <div class="total-box"><span class="total-val">${fb.cleansheets||0}</span><div class="total-lbl">Clean Sheets</div></div>
+        <div class="total-box"><span class="total-val">${fb.motm||0}</span><div class="total-lbl">MOM Awards</div></div>
+        <div class="total-box" style="border-color:rgba(255,215,0,.3);"><span class="total-val" style="color:var(--gold);">${fb.yellow||0}</span><div class="total-lbl">Yellow Cards</div></div>
+        <div class="total-box" style="border-color:rgba(255,51,102,.3);"><span class="total-val" style="color:var(--danger);">${fb.red||0}</span><div class="total-lbl">Red Cards</div></div>
+      </div>`;
+  } else {
+    const bat = p.batting||{}, bowl = p.bowling||{}, field = p.fielding||{};
+    const batAvg = (bat.innings-bat.notout)>0 ? (bat.runs/(bat.innings-bat.notout)).toFixed(2) : (bat.runs||'—');
+    const sr = bat.balls>0 ? ((bat.runs/bat.balls)*100).toFixed(1) : '—';
+    const econ = bowl.overs>0 ? (bowl.runs/bowl.overs).toFixed(2) : '—';
+    const bowlAvg = bowl.wickets>0 ? (bowl.runs/bowl.wickets).toFixed(2) : '—';
+    const bowlSR = bowl.wickets>0 ? ((bowl.overs*6)/bowl.wickets).toFixed(1) : '—';
+    statsHtml = `
+      <div class="section-title">🏏 BATTING</div>
+      <div class="totals-grid">
+        <div class="total-box"><span class="total-val">${bat.runs||0}</span><div class="total-lbl">Total Runs</div></div>
+        <div class="total-box"><span class="total-val">${bat.balls||0}</span><div class="total-lbl">Balls Faced</div></div>
+        <div class="total-box"><span class="total-val">${batAvg}</span><div class="total-lbl">Average</div></div>
+        <div class="total-box"><span class="total-val">${sr}</span><div class="total-lbl">Strike Rate</div></div>
+        <div class="total-box"><span class="total-val">${bat.fours||0}</span><div class="total-lbl">Total 4s</div></div>
+        <div class="total-box"><span class="total-val">${bat.sixes||0}</span><div class="total-lbl">Total 6s</div></div>
+        <div class="total-box"><span class="total-val">${bat.hs||'—'}</span><div class="total-lbl">Highest</div></div>
+        <div class="total-box"><span class="total-val">${bat['50s']||0} / ${bat['100s']||0}</span><div class="total-lbl">50s / 100s</div></div>
+      </div>
+
+      <div class="section-title" style="margin-top:20px;">⚡ BOWLING</div>
+      <div class="totals-grid">
+        <div class="total-box"><span class="total-val">${bowl.wickets||0}</span><div class="total-lbl">Wickets</div></div>
+        <div class="total-box"><span class="total-val">${bowl.overs||0}</span><div class="total-lbl">Overs</div></div>
+        <div class="total-box"><span class="total-val">${bowl.runs||0}</span><div class="total-lbl">Runs Given</div></div>
+        <div class="total-box"><span class="total-val">${econ}</span><div class="total-lbl">Economy</div></div>
+        <div class="total-box"><span class="total-val">${bowlAvg}</span><div class="total-lbl">Bowl Avg</div></div>
+        <div class="total-box"><span class="total-val">${bowlSR}</span><div class="total-lbl">Bowl SR</div></div>
+        <div class="total-box"><span class="total-val">${bowl.best||'—'}</span><div class="total-lbl">Best</div></div>
+        <div class="total-box"><span class="total-val">${bowl.maidens||0}</span><div class="total-lbl">Maidens</div></div>
+      </div>
+
+      <div class="section-title" style="margin-top:20px;">🎯 FIELDING</div>
+      <div class="totals-grid">
+        <div class="total-box"><span class="total-val">${field.catches||0}</span><div class="total-lbl">Catches</div></div>
+        <div class="total-box"><span class="total-val">${field.runouts||0}</span><div class="total-lbl">Run Outs</div></div>
+        <div class="total-box"><span class="total-val">${field.stumpings||0}</span><div class="total-lbl">Stumpings</div></div>
+        <div class="total-box"><span class="total-val">${field.motm||0}</span><div class="total-lbl">MOTM Awards</div></div>
+      </div>`;
+  }
+
+  document.getElementById('modalBody').innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+      <div class="player-avatar" style="width:60px;height:60px;font-size:22px;">${esc(p.avatar&&p.avatar.length<=2?p.avatar:av)}</div>
+      <div>
+        <div style="font-size:20px;font-weight:700;color:var(--text);">${esc(p.name)}</div>
+        <div style="font-size:13px;color:var(--muted);letter-spacing:1px;">${esc(p.role||'Player')}${p.team ? ` · <span style="color:var(--accent);">${esc(p.team)}</span>` : ''}</div>
+        <div style="font-size:11px;color:var(--accent2);letter-spacing:1px;margin-top:2px;">${p.sport==='football'?'⚽ Football':'🏏 Cricket'}</div>
+      </div>
+    </div>
+    ${statsHtml}
+    ${p.notes ? `<div class="note-text" style="margin-top:16px;">💬 ${esc(p.notes)}</div>` : ''}
+  `;
+  document.getElementById('playerModal').classList.add('open');
+};
+window._closeModal = function() { document.getElementById('playerModal').classList.remove('open'); };
+
+// ===== RENDER POINT TABLE =====
+function renderPointTable() {
+  const el = document.getElementById('pointTableContainer');
+  if (!pointTable.length) { el.innerHTML=`<div class="empty-state"><div class="ei">📊</div><p>No point table data yet.</p></div>`; return; }
+  const sorted = [...pointTable].sort((a,b)=>b.pts-a.pts||b.nrr-a.nrr);
+  const posClr = ['pos-1','pos-2','pos-3'];
+  el.innerHTML = `
+    <div class="pt-header-row">
+      <div>#</div><div>Team</div><div>P</div><div>W</div><div>L</div><div>NR</div><div>NRR</div><div style="text-align:center;">Pts</div>
+    </div>
+    ${sorted.map((t,i) => `
+    <div class="pt-row">
+      <div class="pt-pos ${posClr[i]||''}">${i+1}</div>
+      <div class="pt-team">${esc(t.team)}</div>
+      <div class="pt-num">${t.mp||0}</div>
+      <div class="pt-num">${t.w||0}</div>
+      <div class="pt-num">${t.l||0}</div>
+      <div class="pt-num">${t.nr||0}</div>
+      <div class="pt-nrr" style="color:${(parseFloat(t.nrr)||0)>=0?'var(--accent3)':'var(--danger)'}">${t.nrr||'0.000'}</div>
+      <div class="pt-pts">${t.pts||0}</div>
+    </div>`).join('')}`;
+}
+
+// ===== RENDER MEMORIES =====
+function renderMemories() {
+  const el = document.getElementById('memoriesGrid');
+  if (!memories.length) { el.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="ei">📸</div><p>No memories yet. Be the first!</p></div>`; return; }
+  el.innerHTML = memories.map(m => `
+    <div class="memory-item">
+      <img src="${esc(m.url)}" alt="Memory" loading="lazy" onerror="this.style.display='none'">
+      <div class="memory-item-footer">
+        <div class="memory-uploader">📍 ${esc(m.uploader||'Anonymous')}</div>
+        ${m.caption ? `<div style="font-size:12px;color:var(--text);margin-top:3px;">${esc(m.caption)}</div>` : ''}
+        <div class="memory-time">${timeAgo(m.date)}</div>
+        <button class="memory-delete-btn" onclick="_deleteMemory('${m.firestoreId}','${esc(m.storagePath||'')}')">🗑 Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+// ===== UPLOAD MEMORY (ALL USERS) =====
+window._previewImg = function(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 5*1024*1024) { toast('❌ File too large! Max 5MB'); input.value=''; return; }
+  selectedFile = file;
+  const preview = document.getElementById('imgPreview');
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = 'block';
+};
+
+// Drag and drop
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+zone.addEventListener('drop', e => {
+  e.preventDefault(); zone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) {
+    selectedFile = f;
+    const preview = document.getElementById('imgPreview');
+    preview.src = URL.createObjectURL(f); preview.style.display = 'block';
+  }
+});
+
+window._uploadMemory = async function() {
+  const uploader = getVal('mem_uploader') || 'Anonymous';
+  const caption = getVal('mem_caption');
+  if (!selectedFile) { toast('⚠️ Please choose a photo first!'); return; }
+  const btn = document.getElementById('uploadMemBtn');
+  btn.disabled = true; btn.textContent = '⏳ Uploading…';
+  try {
+    const path = `memories/${Date.now()}_${selectedFile.name}`;
+    const storageRef = ref(storage, path);
+    await uploadBytes(storageRef, selectedFile);
+    const url = await getDownloadURL(storageRef);
+    await addDoc(memoriesCol, {
+      url, uploader, caption, storagePath: path,
+      date: new Date().toISOString().split('T')[0],
+      createdAt: serverTimestamp()
+    });
+    toast('📸 Memory uploaded!');
+    document.getElementById('mem_uploader').value = '';
+    document.getElementById('mem_caption').value = '';
+    document.getElementById('imgPreview').style.display = 'none';
+    document.getElementById('memFileInput').value = '';
+    selectedFile = null;
+  } catch(e) {
+    toast('❌ Upload failed: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '📸 UPLOAD MEMORY';
+};
+
+window._deleteMemory = async function(id, storagePath) {
+  if (!confirm('Delete this memory?')) return;
+  try {
+    await deleteDoc(doc(db, 'memories', id));
+    if (storagePath) { try { await deleteObject(ref(storage, storagePath)); } catch(e){} }
+    toast('🗑️ Memory deleted');
+  } catch(e) { toast('❌ ' + e.message); }
+};
+
+// ===== AUTO CALC PLAYER TOTALS =====
+window._calcPlayerTotals = function() {
+  const runs = numVal('pl_bat_runs');
+  const balls = numVal('pl_bat_balls');
+  const innings = numVal('pl_bat_innings');
+  const notout = numVal('pl_bat_notout');
+  const fours = numVal('pl_bat_fours');
+  const sixes = numVal('pl_bat_sixes');
+
+  const avg = (innings-notout)>0 ? (runs/(innings-notout)).toFixed(2) : runs;
+  const sr = balls>0 ? ((runs/balls)*100).toFixed(2) : 0;
+  const boundaryRuns = fours*4 + sixes*6;
+
+  document.getElementById('batCalcChips').innerHTML = `
+    <span class="calc-chip">Avg: ${avg}</span>
+    <span class="calc-chip">SR: ${sr}</span>
+    <span class="calc-chip">Boundary Runs: ${boundaryRuns}</span>
+    <span class="calc-chip">Dismissals: ${innings-notout}</span>
+  `;
+
+  const overs = numVal('pl_bowl_overs');
+  const bRuns = numVal('pl_bowl_runs');
+  const wickets = numVal('pl_bowl_wickets');
+  const econ = overs>0 ? (bRuns/overs).toFixed(2) : 0;
+  const bowlAvg = wickets>0 ? (bRuns/wickets).toFixed(2) : '—';
+  const bowlSR = wickets>0 ? ((overs*6)/wickets).toFixed(1) : '—';
+
+  document.getElementById('bowlCalcChips').innerHTML = `
+    <span class="calc-chip">Economy: ${econ}</span>
+    <span class="calc-chip">Bowl Avg: ${bowlAvg}</span>
+    <span class="calc-chip">Bowl SR: ${bowlSR}</span>
+    <span class="calc-chip">Total Balls: ${Math.round(overs*6)}</span>
+  `;
+};
+
+// ===== AUTO CALC POINT TABLE =====
+window._calcPT = function() {
+  const w = numVal('pt_w'), nr = numVal('pt_nr');
+  const pts = w*2 + nr;
+  document.getElementById('ptCalcChips').innerHTML = `<span class="calc-chip">Points: ${pts}</span><span class="calc-chip">Formula: (${w}W × 2) + (${nr}NR × 1) = ${pts}</span>`;
+};
+
+let currentEditPlayerId = null;
+
+// ===== SPORT FIELD TOGGLE =====
+window._showPlayerSportFields = function() {
+  const sport = document.getElementById('pl_sport').value;
+  document.getElementById('cricket-fields').style.display = sport==='cricket' ? '' : 'none';
+  document.getElementById('football-fields').style.display = sport==='football' ? '' : 'none';
+};
+
+// ===== EDIT PLAYER =====
+window._editPlayer = function(id) {
+  const p = players.find(x=>x.firestoreId===id); if (!p) return;
+  currentEditPlayerId = id;
+  // scroll to player form
+  document.querySelector('.admin-tab[onclick*="player"]')?.click();
+  window._adminTab('player', document.querySelector('.admin-tab[onclick*="player"]'));
+  // fill sport & team
+  document.getElementById('pl_sport').value = p.sport||'cricket';
+  window._showPlayerSportFields();
+  document.getElementById('pl_team').value = p.team||'';
+  document.getElementById('pl_name').value = p.name||'';
+  document.getElementById('pl_role').value = p.role||'All-Rounder';
+  document.getElementById('pl_avatar').value = p.avatar||'';
+  document.getElementById('pl_notes').value = p.notes||'';
+
+  if ((p.sport||'cricket')==='cricket') {
+    const bat = p.batting||{}, bowl = p.bowling||{}, field = p.fielding||{};
+    document.getElementById('pl_bat_matches').value = bat.matches||'';
+    document.getElementById('pl_bat_innings').value = bat.innings||'';
+    document.getElementById('pl_bat_runs').value = bat.runs||'';
+    document.getElementById('pl_bat_balls').value = bat.balls||'';
+    document.getElementById('pl_bat_hs').value = bat.hs||'';
+    document.getElementById('pl_bat_notout').value = bat.notout||'';
+    document.getElementById('pl_bat_fours').value = bat.fours||'';
+    document.getElementById('pl_bat_sixes').value = bat.sixes||'';
+    document.getElementById('pl_bat_50s').value = bat['50s']||'';
+    document.getElementById('pl_bat_100s').value = bat['100s']||'';
+    document.getElementById('pl_bowl_overs').value = bowl.overs||'';
+    document.getElementById('pl_bowl_maidens').value = bowl.maidens||'';
+    document.getElementById('pl_bowl_runs').value = bowl.runs||'';
+    document.getElementById('pl_bowl_wickets').value = bowl.wickets||'';
+    document.getElementById('pl_bowl_best').value = bowl.best||'';
+    document.getElementById('pl_bowl_extras').value = bowl.extras||'';
+    document.getElementById('pl_catches').value = field.catches||'';
+    document.getElementById('pl_runouts').value = field.runouts||'';
+    document.getElementById('pl_stumpings').value = field.stumpings||'';
+    document.getElementById('pl_motm').value = field.motm||'';
+    _calcPlayerTotals();
+  } else {
+    const fb = p.football||{};
+    document.getElementById('fb_matches').value = fb.matches||'';
+    document.getElementById('fb_goals').value = fb.goals||'';
+    document.getElementById('fb_assists').value = fb.assists||'';
+    document.getElementById('fb_saves').value = fb.saves||'';
+    document.getElementById('fb_yellow').value = fb.yellow||'';
+    document.getElementById('fb_red').value = fb.red||'';
+    document.getElementById('fb_cleansheets').value = fb.cleansheets||'';
+    document.getElementById('fb_motm').value = fb.motm||'';
+  }
+
+  document.getElementById('editBanner').style.display = 'block';
+  document.getElementById('cancelEditBtn').style.display = 'inline-flex';
+  document.getElementById('savePlayerBtn').textContent = '✏️ UPDATE PLAYER CARD';
+  document.getElementById('admin-player').scrollIntoView({behavior:'smooth'});
+  toast('✏️ Editing: ' + p.name);
+};
+
+window._cancelEdit = function() {
+  currentEditPlayerId = null;
+  document.getElementById('editBanner').style.display = 'none';
+  document.getElementById('cancelEditBtn').style.display = 'none';
+  document.getElementById('savePlayerBtn').textContent = '💾 SAVE PLAYER CARD';
+  ['pl_name','pl_team','pl_avatar','pl_bat_matches','pl_bat_innings','pl_bat_runs','pl_bat_balls','pl_bat_hs','pl_bat_notout','pl_bat_fours','pl_bat_sixes','pl_bat_50s','pl_bat_100s','pl_bowl_overs','pl_bowl_maidens','pl_bowl_runs','pl_bowl_wickets','pl_bowl_best','pl_bowl_extras','pl_catches','pl_runouts','pl_stumpings','pl_motm','pl_notes','fb_matches','fb_goals','fb_assists','fb_saves','fb_yellow','fb_red','fb_cleansheets','fb_motm'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('batCalcChips').innerHTML='—';
+  document.getElementById('bowlCalcChips').innerHTML='—';
+};
+
+// ===== SAVE PLAYER =====
+window._savePlayer = async function() {
+  const name = getVal('pl_name');
+  if (!name) { toast('⚠️ Player name required'); return; }
+  const sport = document.getElementById('pl_sport').value || 'cricket';
+  const btn = document.getElementById('savePlayerBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  let playerData = {
+    name, sport, team: getVal('pl_team'),
+    role: getVal('pl_role'), avatar: getVal('pl_avatar'),
+    notes: getVal('pl_notes'),
+  };
+
+  if (sport === 'cricket') {
+    playerData.batting = {
+      matches: numVal('pl_bat_matches'), innings: numVal('pl_bat_innings'),
+      runs: numVal('pl_bat_runs'), balls: numVal('pl_bat_balls'),
+      hs: getVal('pl_bat_hs'), notout: numVal('pl_bat_notout'),
+      fours: numVal('pl_bat_fours'), sixes: numVal('pl_bat_sixes'),
+      '50s': numVal('pl_bat_50s'), '100s': numVal('pl_bat_100s'),
+    };
+    playerData.bowling = {
+      overs: numVal('pl_bowl_overs'), maidens: numVal('pl_bowl_maidens'),
+      runs: numVal('pl_bowl_runs'), wickets: numVal('pl_bowl_wickets'),
+      best: getVal('pl_bowl_best'), extras: getVal('pl_bowl_extras'),
+    };
+    playerData.fielding = {
+      catches: numVal('pl_catches'), runouts: numVal('pl_runouts'),
+      stumpings: numVal('pl_stumpings'), motm: numVal('pl_motm'),
+    };
+  } else {
+    playerData.football = {
+      matches: numVal('fb_matches'), goals: numVal('fb_goals'),
+      assists: numVal('fb_assists'), saves: numVal('fb_saves'),
+      yellow: numVal('fb_yellow'), red: numVal('fb_red'),
+      cleansheets: numVal('fb_cleansheets'), motm: numVal('fb_motm'),
+    };
+  }
+
+  try {
+    if (currentEditPlayerId) {
+      const { updateDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+      await updateDoc(doc(db,'players',currentEditPlayerId), playerData);
+      toast('✅ Player card updated!');
+      window._cancelEdit();
+    } else {
+      await addDoc(playersCol, {...playerData, createdAt:serverTimestamp()});
+      toast('✅ Player card saved!');
+      ['pl_name','pl_team','pl_avatar','pl_bat_matches','pl_bat_innings','pl_bat_runs','pl_bat_balls','pl_bat_hs','pl_bat_notout','pl_bat_fours','pl_bat_sixes','pl_bat_50s','pl_bat_100s','pl_bowl_overs','pl_bowl_maidens','pl_bowl_runs','pl_bowl_wickets','pl_bowl_best','pl_bowl_extras','pl_catches','pl_runouts','pl_stumpings','pl_motm','pl_notes','fb_matches','fb_goals','fb_assists','fb_saves','fb_yellow','fb_red','fb_cleansheets','fb_motm'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+      document.getElementById('batCalcChips').innerHTML='—';
+      document.getElementById('bowlCalcChips').innerHTML='—';
+    }
+  } catch(e) { toast('❌ ' + e.message); }
+  btn.disabled=false;
+  btn.textContent = currentEditPlayerId ? '✏️ UPDATE PLAYER CARD' : '💾 SAVE PLAYER CARD';
+};
+
+// ===== SAVE POINT TABLE ENTRY =====
+window._savePTEntry = async function() {
+  const team = getVal('pt_team');
+  if (!team) { toast('⚠️ Team name required'); return; }
+  const w=numVal('pt_w'), l=numVal('pt_l'), nr=numVal('pt_nr');
+  const pts = w*2+nr;
+  try {
+    await addDoc(ptCol, {
+      team, mp: numVal('pt_mp'), w, l, nr, pts, nrr: getVal('pt_nrr')||'0.000',
+      createdAt: serverTimestamp()
+    });
+    toast('✅ Team added to table!');
+    ['pt_team','pt_mp','pt_w','pt_l','pt_nr','pt_nrr'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+    document.getElementById('ptCalcChips').innerHTML='—';
+  } catch(e) { toast('❌ ' + e.message); }
+};
+
+window._clearPT = async function() {
+  if (!confirm('Clear all point table entries?')) return;
+  const snap = await getDocs(ptCol);
+  for (const d of snap.docs) await deleteDoc(doc(db,'pointtable',d.id));
+  toast('🗑️ Point table cleared');
+};
+
+// ===== RENDER ADMIN LISTS =====
+function renderAdminList() {
+  const el = document.getElementById('adminList');
+  const icons = {cricket:'🏏',football:'⚽',efootball:'🎮',ludo:'🎲',bgmi:'🔫',freefire:'🔥'};
+  if (!scores.length) { el.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">No entries</div>'; return; }
+  el.innerHTML = scores.map(s=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:20px;">${icons[s.game]||'🎮'}</span>
+      <div style="flex:1;"><div style="font-size:14px;font-weight:700;">${esc(s.title)}</div><div style="font-size:11px;color:var(--muted);">${timeAgo(s.date)} · ${s.game}</div></div>
+      <button onclick="window._deleteScore('${s.firestoreId}')" style="background:rgba(255,51,102,.15);border:1px solid rgba(255,51,102,.3);color:var(--danger);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:12px;font-family:'Rajdhani',sans-serif;font-weight:600;">Delete</button>
+    </div>`).join('');
+}
+
+function renderAdminPlayerList() {
+  const el = document.getElementById('adminPlayerList');
+  if (!players.length) { el.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">No players</div>'; return; }
+  el.innerHTML = players.map(p=>{
+    const sportIcon = p.sport==='football' ? '⚽' : '🏏';
+    const sub = p.sport==='football'
+      ? `${esc(p.team||'No Team')} · Goals: ${p.football?.goals||0} · Assists: ${p.football?.assists||0}`
+      : `${esc(p.team||'No Team')} · Runs: ${p.batting?.runs||0} · Wkts: ${p.bowling?.wickets||0}`;
+    return `
+    <div style="padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">${sportIcon}</span>
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:700;">${esc(p.name)}</div>
+          <div style="font-size:11px;color:var(--muted);">${esc(p.role||'Player')} · ${sub}</div>
+        </div>
+        <button onclick="window._editPlayer('${p.firestoreId}')" style="background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.3);color:var(--accent);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:12px;font-family:'Rajdhani',sans-serif;font-weight:600;margin-right:4px;">✏️ Edit</button>
+        <button onclick="window._deletePlayer('${p.firestoreId}')" style="background:rgba(255,51,102,.15);border:1px solid rgba(255,51,102,.3);color:var(--danger);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:12px;font-family:'Rajdhani',sans-serif;font-weight:600;">🗑 Del</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderPTAdminList() {
+  const el = document.getElementById('ptAdminList');
+  if (!pointTable.length) { el.innerHTML='<div style="color:var(--muted);font-size:12px;">No entries</div>'; return; }
+  const sorted = [...pointTable].sort((a,b)=>b.pts-a.pts);
+  el.innerHTML = sorted.map((t,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <span style="font-family:'Orbitron',monospace;font-size:13px;font-weight:900;color:var(--gold);width:20px;">${i+1}</span>
+      <div style="flex:1;font-size:14px;font-weight:700;">${esc(t.team)}</div>
+      <span style="font-family:'Orbitron',monospace;font-size:14px;color:var(--accent);">Pts: ${t.pts}</span>
+      <button onclick="window._deletePTEntry('${t.firestoreId}')" style="background:rgba(255,51,102,.15);border:1px solid rgba(255,51,102,.3);color:var(--danger);padding:3px 8px;border-radius:3px;cursor:pointer;font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:600;">✕</button>
+    </div>`).join('');
+}
+
+// ===== DELETE FUNCS =====
+window._deleteScore = async function(id) {
+  if (!confirm('Delete this match entry?')) return;
+  try { await deleteDoc(doc(db,'scores',id)); toast('🗑️ Deleted'); } catch(e) { toast('❌ '+e.message); }
+};
+window._deletePlayer = async function(id) {
+  if (!confirm('Delete this player?')) return;
+  try { await deleteDoc(doc(db,'players',id)); toast('🗑️ Player deleted'); } catch(e) { toast('❌ '+e.message); }
+};
+window._deletePTEntry = async function(id) {
+  try { await deleteDoc(doc(db,'pointtable',id)); toast('🗑️ Removed'); } catch(e) { toast('❌ '+e.message); }
+};
+
+// ===== ADD SCORE =====
+window._addScore = async function() {
+  const game=getVal('gameSelect'), title=getVal('matchTitle'), date=getVal('matchDate'), result=getVal('matchResult'), note=getVal('matchNote');
+  if (!game) { toast('⚠️ Please select a game!'); return; }
+  if (!title) { toast('⚠️ Please enter a match title!'); return; }
+  if (!result) { toast('⚠️ Please enter the result statement!'); return; }
+  let data = {};
+  if (game==='cricket') data={team1:getVal('cr_team1'),team2:getVal('cr_team2'),score1:getVal('cr_score1'),score2:getVal('cr_score2'),overs:getVal('cr_overs'),format:getVal('cr_format'),topbat:getVal('cr_topbat'),topball:getVal('cr_topball'),motm:getVal('cr_motm')};
+  else if (game==='football') data={team1:getVal('fb_team1'),team2:getVal('fb_team2'),g1:getVal('fb_goals1')||0,g2:getVal('fb_goals2')||0,scorers1:getVal('fb_scorers1'),scorers2:getVal('fb_scorers2'),motm:getVal('fb_motm')};
+  else if (game==='efootball') data={player:getVal('ef_player'),opp:getVal('ef_opp'),g1:getVal('ef_g1')||0,g2:getVal('ef_g2')||0,mode:getVal('ef_mode')};
+  else if (game==='ludo') data={winner:getVal('ld_winner'),players:getVal('ld_players'),others:getVal('ld_others'),pieces:getVal('ld_pieces')};
+  else if (game==='bgmi') data={player:getVal('bg_player'),mode:getVal('bg_mode'),kills:getVal('bg_kills'),rank:getVal('bg_rank'),dmg:getVal('bg_dmg'),map:getVal('bg_map'),time:getVal('bg_time')};
+  else if (game==='freefire') data={player:getVal('ff_player'),mode:getVal('ff_mode'),kills:getVal('ff_kills'),rank:getVal('ff_rank'),dmg:getVal('ff_dmg'),time:getVal('ff_time')};
+  const btn=document.getElementById('postBtn'); btn.disabled=true; btn.textContent='Saving…';
+  try {
+    await addDoc(scoresCol,{game,title,date,result,data,note,createdAt:serverTimestamp()});
+    toast('✅ Match result posted!');
+    ['gameSelect','matchTitle','matchDate','matchNote','matchResult'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+    document.querySelectorAll('.game-fields').forEach(f=>f.classList.remove('active'));
+    document.querySelectorAll('input[type=text],input[type=number],textarea').forEach(el=>{if(el.id!='adminPass') el.value='';});
+  } catch(e) { toast('❌ '+e.message); }
+  btn.disabled=false; btn.textContent='➕ POST MATCH RESULT';
+};
+
+// ===== ADMIN AUTH =====
+window._toggleAdminAccess = function() {
+  if (adminLoggedIn) { _logoutAdmin(); return; }
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('adminEmail').value = '';
+  document.getElementById('adminPass').value = '';
+  document.getElementById('loginError').style.display = 'none';
+  setTimeout(() => document.getElementById('adminEmail').focus(), 100);
+};
+
+window._checkPass = async function() {
+  const email = document.getElementById('adminEmail').value.trim();
+  const pass  = document.getElementById('adminPass').value;
+  const btn   = document.getElementById('loginBtn');
+  if (!email || !pass) { toast('⚠️ Enter email and password'); return; }
+  btn.disabled = true; btn.textContent = '⏳ Logging in…';
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+    // onAuthStateChanged handles the rest
+  } catch(e) {
+    document.getElementById('loginError').style.display = 'block';
+    document.getElementById('loginError').textContent = '❌ ' + (e.code === 'auth/invalid-credential' ? 'Wrong email or password!' : e.message);
+    document.getElementById('adminPass').value = '';
+  }
+  btn.disabled = false; btn.textContent = '🔐 LOGIN';
+};
+
+window._logoutAdmin = async function() {
+  try {
+    await signOut(auth);
+    adminLoggedIn = false;
+    currentUser = null;
+    document.getElementById('publicView').style.display = 'block';
+    document.getElementById('adminView').style.display = 'none';
+    document.querySelector('.admin-lock-btn').textContent = '🔐 Admin';
+    toast('👋 Logged out');
+  } catch(e) { toast('❌ ' + e.message); }
+};
+window._filterPub = function(game,btn) {
+  currentFilter=game;
+  document.querySelectorAll('#pubTabs .tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderPublic();
+};
+window._showGameFields = function() {
+  const game=document.getElementById('gameSelect').value;
+  document.querySelectorAll('.game-fields').forEach(f=>f.classList.remove('active'));
+  if (game) document.getElementById('fields-'+game)?.classList.add('active');
+};
+window._fillResult = function(text) {
+  document.getElementById('matchResult').value=text;
+  document.getElementById('matchResult').focus();
+};
+</script>
+</body>
+</html>
